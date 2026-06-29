@@ -13,7 +13,9 @@
 <form action="/site" method="get">
     <select name="site_id" required>
         {% for site in sites %}
-            <option value="{{ site['id'] }}">{{ site["name"] }}</option>
+            <option value="{{ site['id'] }}">
+                {{ site["name"] }}
+            </option>
         {% endfor %}
     </select>
 
