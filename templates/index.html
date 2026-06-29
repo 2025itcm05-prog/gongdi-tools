@@ -1,124 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工地借物管理系統 V2</title>
-
-    <style>
-        body{
-            font-family: Arial;
-            background:#f5f5f5;
-            margin:40px;
-        }
-
-        h1{
-            color:#333;
-        }
-
-        table{
-            width:100%;
-            border-collapse:collapse;
-            background:white;
-        }
-
-        th,td{
-            border:1px solid #ccc;
-            padding:10px;
-            text-align:center;
-        }
-
-        th{
-            background:#1976d2;
-            color:white;
-        }
-
-        .ok{
-            color:green;
-            font-weight:bold;
-        }
-
-        .bad{
-            color:red;
-            font-weight:bold;
-        }
-    </style>
-
+<meta charset="UTF-8">
+<title>工地借物管理系統</title>
 </head>
-
 <body>
 
-<h1>🏗 工地借物管理系統</h1>
-<p>
-    <a href="/admin_login">
-        <button>管理員登入</button>
-    </a>
-</p>
-<p>
-    <a href="/history">
-        <button>查看借用紀錄</button>
-    </a>
-</p>
-<hr>
+<h1>工地借物管理系統 V2.3</h1>
 
-<h2>借用人登入</h2>
+<h2>請選擇工地</h2>
 
-<form action="/search_user" method="post">
+<form action="/site" method="get">
+    <select name="site_id" required>
+        {% for site in sites %}
+            <option value="{{ site['id'] }}">{{ site["name"] }}</option>
+        {% endfor %}
+    </select>
 
-    <input
-        type="text"
-        name="phone"
-        placeholder="請輸入手機號碼"
-        required>
+    <br><br>
 
-    <button type="submit">
-        搜尋
-    </button>
-
+    <button type="submit">進入工地</button>
 </form>
 
-<hr>
-<table>
+<br>
 
-<tr>
-    <th>工具名稱</th>
-    <th>總數量</th>
-    <th>可借數量</th>
-    <th>存放位置</th>
-    <th>狀態</th>
-</tr>
-
-{% for tool in tools %}
-
-<tr>
-
-<td>{{ tool["name"] }}</td>
-
-<td>{{ tool["total_quantity"] }}</td>
-
-<td>{{ tool["available_quantity"] }}</td>
-
-<td>{{ tool["location"] }}</td>
-
-<td>
-
-{% if tool["status"]=="正常" %}
-
-<span class="ok">正常</span>
-
-{% else %}
-
-<span class="bad">{{ tool["status"] }}</span>
-
-{% endif %}
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</table>
+<a href="/admin_login">
+    <button>管理員登入</button>
+</a>
 
 </body>
 </html>

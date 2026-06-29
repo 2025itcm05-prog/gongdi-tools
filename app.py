@@ -17,19 +17,14 @@ def current_admin():
 
     conn = get_db()
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM admins WHERE id=?", (session["admin_id"],))
     admin = cursor.fetchone()
-
     conn.close()
     return admin
 
 
 def require_admin():
-    admin = current_admin()
-    if not admin:
-        return None
-    return admin
+    return current_admin()
 
 
 @app.route("/")
@@ -38,20 +33,44 @@ def index():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, name, total_quantity, available_quantity, location, status
-        FROM tools
+        SELECT *
+        FROM sites
+        WHERE status='啟用'
         ORDER BY name
     """)
 
-    tools = cursor.fetchall()
+    sites = cursor.fetchall()
     conn.close()
 
-    return render_template("index.html", tools=tools)
+    return render_template("index.html", sites=sites)
+
+
+@app.route("/site")
+def select_site():
+    site_id = request.args.get("site_id")
+
+    if not site_id:
+        return redirect("/")
+
+    session["site_id"] = int(site_id)
+
+    return redirect("/search")
+
+
+@app.route("/search")
+def search_page():
+    if "site_id" not in session:
+        return redirect("/")
+
+    return render_template("search.html")
 
 
 @app.route("/search_user", methods=["POST"])
 def search_user():
     phone = request.form["phone"]
+
+    if "site_id" not in session:
+        return redirect("/")
 
     conn = get_db()
     cursor = conn.cursor()
@@ -61,13 +80,21 @@ def search_user():
 
     conn.close()
 
-    return render_template("user_result.html", user=user, phone=phone)
+    return render_template(
+        "user_result.html",
+        user=user,
+        phone=phone,
+        site_id=session["site_id"]
+    )
 
 
 @app.route("/add_user", methods=["POST"])
 def add_user():
     name = request.form["name"]
     phone = request.form["phone"]
+
+    if "site_id" not in session:
+        return redirect("/")
 
     conn = get_db()
     cursor = conn.cursor()
@@ -78,9 +105,10 @@ def add_user():
     )
 
     conn.commit()
+    user_id = cursor.lastrowid
     conn.close()
 
-    return redirect("/")
+    return redirect(f"/borrow/{user_id}")
 
 
 @app.route("/borrow/<int:user_id>")
@@ -93,41 +121,81 @@ def borrow_page(user_id):
     cursor.execute("SELECT * FROM users WHERE id=?", (user_id,))
     user = cursor.fetchone()
 
-    cursor.execute("""
-        SELECT *
-        FROM tools
-        WHERE available_quantity > 0
-        AND status='正常'
-        ORDER BY name
-    """)
-    tools = cursor.fetchall()
-
     if admin and admin["role"] == "site":
-        cursor.execute("SELECT * FROM sites WHERE id=?", (admin["site_id"],))
+        selected_site_id = admin["site_id"]
+        cursor.execute("SELECT * FROM sites WHERE id=?", (selected_site_id,))
         sites = cursor.fetchall()
     else:
-        cursor.execute("SELECT * FROM sites WHERE status='啟用' ORDER BY name")
+        cursor.execute("""
+            SELECT *
+            FROM sites
+            WHERE status='啟用'
+            ORDER BY name
+        """)
         sites = cursor.fetchall()
+
+        selected_site_id = session.get("site_id")
+
+        if selected_site_id is None and sites:
+            selected_site_id = sites[0]["id"]
+            session["site_id"] = selected_site_id
+
+    if selected_site_id:
+        cursor.execute("""
+            SELECT
+                tools.id,
+                tools.name,
+                tools.location,
+                tools.status,
+                site_tools.total_quantity,
+                site_tools.available_quantity
+            FROM site_tools
+            JOIN tools ON site_tools.tool_id = tools.id
+            WHERE site_tools.site_id=?
+            AND site_tools.available_quantity > 0
+            AND tools.status='正常'
+            ORDER BY tools.name
+        """, (selected_site_id,))
+        tools = cursor.fetchall()
+    else:
+        tools = []
 
     conn.close()
 
-    return render_template("borrow.html", user=user, tools=tools, sites=sites, admin=admin)
+    return render_template(
+        "borrow.html",
+        user=user,
+        tools=tools,
+        sites=sites,
+        admin=admin,
+        selected_site_id=selected_site_id
+    )
 
 
 @app.route("/borrow_submit", methods=["POST"])
 def borrow_submit():
     user_id = request.form["user_id"]
-    site_id = request.form["site_id"]
+    site_id = int(request.form["site_id"])
+
+    admin = current_admin()
+
+    if admin and admin["role"] == "site":
+        site_id = admin["site_id"]
 
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, available_quantity FROM tools")
-    tools = cursor.fetchall()
+    cursor.execute("""
+        SELECT tool_id, available_quantity
+        FROM site_tools
+        WHERE site_id=?
+    """, (site_id,))
 
-    for tool in tools:
-        tool_id = tool["id"]
-        available_quantity = tool["available_quantity"]
+    site_tools = cursor.fetchall()
+
+    for item in site_tools:
+        tool_id = item["tool_id"]
+        available_quantity = item["available_quantity"]
 
         qty = request.form.get(f"qty_{tool_id}")
 
@@ -136,15 +204,20 @@ def borrow_submit():
 
             if qty <= available_quantity:
                 cursor.execute("""
-                    INSERT INTO borrow_records(user_id, tool_id, quantity, site_id)
+                    INSERT INTO borrow_records(
+                        user_id,
+                        tool_id,
+                        quantity,
+                        site_id
+                    )
                     VALUES(?, ?, ?, ?)
                 """, (user_id, tool_id, qty, site_id))
 
                 cursor.execute("""
-                    UPDATE tools
+                    UPDATE site_tools
                     SET available_quantity = available_quantity - ?
-                    WHERE id=?
-                """, (qty, tool_id))
+                    WHERE site_id=? AND tool_id=?
+                """, (qty, site_id, tool_id))
 
     conn.commit()
     conn.close()
@@ -234,10 +307,14 @@ def return_tool(record_id):
         """, (record_id,))
 
         cursor.execute("""
-            UPDATE tools
+            UPDATE site_tools
             SET available_quantity = available_quantity + ?
-            WHERE id=?
-        """, (record["quantity"], record["tool_id"]))
+            WHERE site_id=? AND tool_id=?
+        """, (
+            record["quantity"],
+            record["site_id"],
+            record["tool_id"]
+        ))
 
         conn.commit()
 
@@ -270,7 +347,7 @@ def admin_login():
             session["admin_site_id"] = admin["site_id"]
             return redirect("/admin")
 
-        return "帳號或密碼錯誤<br><a href=' '>重新登入</a >"
+        return "帳號或密碼錯誤<br><a href='/admin_login'>重新登入</a>"
 
     return render_template("admin_login.html")
 
@@ -299,6 +376,7 @@ def admin():
             FROM borrow_records
             WHERE site_id=? AND status='借出'
         """, (admin["site_id"],))
+
         borrowed_count = cursor.fetchone()["count"]
 
         conn.close()
@@ -340,16 +418,49 @@ def admin_tools():
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT *
-        FROM tools
-        ORDER BY name
-    """)
+    if admin["role"] == "site":
+        cursor.execute("""
+            SELECT
+                site_tools.id AS site_tool_id,
+                sites.name AS site_name,
+                tools.id AS tool_id,
+                tools.name,
+                tools.location,
+                tools.status,
+                site_tools.total_quantity,
+                site_tools.available_quantity
+            FROM site_tools
+            JOIN tools ON tools.id = site_tools.tool_id
+            JOIN sites ON sites.id = site_tools.site_id
+            WHERE site_tools.site_id=?
+            ORDER BY tools.name
+        """, (admin["site_id"],))
+    else:
+        cursor.execute("""
+            SELECT
+                site_tools.id AS site_tool_id,
+                sites.name AS site_name,
+                tools.id AS tool_id,
+                tools.name,
+                tools.location,
+                tools.status,
+                site_tools.total_quantity,
+                site_tools.available_quantity
+            FROM site_tools
+            JOIN tools ON tools.id = site_tools.tool_id
+            JOIN sites ON sites.id = site_tools.site_id
+            ORDER BY tools.name, sites.name
+        """)
 
     tools = cursor.fetchall()
     conn.close()
 
-    return render_template("admin_tools.html", tools=tools, admin=admin)
+    return render_template(
+        "admin_tools.html",
+        tools=tools,
+        admin=admin,
+        site_mode=(admin["role"] == "site")
+    )
 
 
 @app.route("/add_tool", methods=["POST"])
@@ -368,13 +479,109 @@ def add_tool():
     cursor.execute("""
         INSERT INTO tools(
             name,
+            category_id,
             total_quantity,
             available_quantity,
             location,
             status
         )
-        VALUES(?, ?, ?, ?, '正常')
+        VALUES(?, 5, ?, ?, ?, '正常')
     """, (name, total_quantity, total_quantity, location))
+
+    tool_id = cursor.lastrowid
+
+    if admin["role"] == "site":
+        cursor.execute("""
+            INSERT INTO site_tools(
+                site_id,
+                tool_id,
+                total_quantity,
+                available_quantity
+            )
+            VALUES(?, ?, ?, ?)
+        """, (
+            admin["site_id"],
+            tool_id,
+            total_quantity,
+            total_quantity
+        ))
+    else:
+        cursor.execute("SELECT id FROM sites WHERE status='啟用'")
+        sites = cursor.fetchall()
+
+        for site in sites:
+            cursor.execute("""
+                INSERT INTO site_tools(
+                    site_id,
+                    tool_id,
+                    total_quantity,
+                    available_quantity
+                )
+                VALUES(?, ?, ?, ?)
+            """, (
+                site["id"],
+                tool_id,
+                total_quantity,
+                total_quantity
+            ))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin_tools")
+
+
+@app.route("/update_site_tool/<int:site_tool_id>", methods=["POST"])
+def update_site_tool(site_tool_id):
+    admin = require_admin()
+    if not admin:
+        return redirect("/admin_login")
+
+    name = request.form["name"]
+    total_quantity = int(request.form["total_quantity"])
+    available_quantity = int(request.form["available_quantity"])
+    location = request.form["location"]
+    status = request.form["status"]
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT site_tools.site_id, site_tools.tool_id
+        FROM site_tools
+        WHERE site_tools.id=?
+    """, (site_tool_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return redirect("/admin_tools")
+
+    if admin["role"] == "site" and row["site_id"] != admin["site_id"]:
+        conn.close()
+        return "你沒有權限修改這個工地的工具。<br><a href='/admin_tools'>返回工具管理</a>"
+
+    cursor.execute("""
+        UPDATE tools
+        SET name=?, location=?, status=?
+        WHERE id=?
+    """, (
+        name,
+        location,
+        status,
+        row["tool_id"]
+    ))
+
+    cursor.execute("""
+        UPDATE site_tools
+        SET total_quantity=?,
+            available_quantity=?
+        WHERE id=?
+    """, (
+        total_quantity,
+        available_quantity,
+        site_tool_id
+    ))
 
     conn.commit()
     conn.close()
@@ -400,19 +607,39 @@ def update_tool(tool_id):
     cursor.execute("""
         UPDATE tools
         SET name=?,
-            total_quantity=?,
-            available_quantity=?,
             location=?,
             status=?
         WHERE id=?
     """, (
         name,
-        total_quantity,
-        available_quantity,
         location,
         status,
         tool_id
     ))
+
+    if admin["role"] == "site":
+        cursor.execute("""
+            UPDATE site_tools
+            SET total_quantity=?,
+                available_quantity=?
+            WHERE site_id=? AND tool_id=?
+        """, (
+            total_quantity,
+            available_quantity,
+            admin["site_id"],
+            tool_id
+        ))
+    else:
+        cursor.execute("""
+            UPDATE site_tools
+            SET total_quantity=?,
+                available_quantity=?
+            WHERE tool_id=?
+        """, (
+            total_quantity,
+            available_quantity,
+            tool_id
+        ))
 
     conn.commit()
     conn.close()
@@ -429,19 +656,33 @@ def delete_tool(tool_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM borrow_records
-        WHERE tool_id=? AND status='借出'
-    """, (tool_id,))
+    if admin["role"] == "site":
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM borrow_records
+            WHERE tool_id=? AND site_id=? AND status='借出'
+        """, (tool_id, admin["site_id"]))
+    else:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM borrow_records
+            WHERE tool_id=? AND status='借出'
+        """, (tool_id,))
 
     borrowed_count = cursor.fetchone()[0]
 
     if borrowed_count > 0:
         conn.close()
-        return "這個工具目前有人借用中，不能刪除。<br><a href='/admin_tools'>返回工具管理</a >"
+        return "這個工具目前有人借用中，不能刪除。<br><a href='/admin_tools'>返回工具管理</a>"
 
-    cursor.execute("DELETE FROM tools WHERE id=?", (tool_id,))
+    if admin["role"] == "site":
+        cursor.execute("""
+            DELETE FROM site_tools
+            WHERE site_id=? AND tool_id=?
+        """, (admin["site_id"], tool_id))
+    else:
+        cursor.execute("DELETE FROM site_tools WHERE tool_id=?", (tool_id,))
+        cursor.execute("DELETE FROM tools WHERE id=?", (tool_id,))
 
     conn.commit()
     conn.close()
@@ -456,7 +697,7 @@ def admin_sites():
         return redirect("/admin_login")
 
     if admin["role"] != "super":
-        return "你沒有權限管理工地。<br><a href='/admin'>返回後台</a >"
+        return "你沒有權限管理工地。<br><a href='/admin'>返回後台</a>"
 
     conn = get_db()
     cursor = conn.cursor()
@@ -476,7 +717,7 @@ def add_site():
         return redirect("/admin_login")
 
     if admin["role"] != "super":
-        return "你沒有權限新增工地。<br><a href='/admin'>返回後台</a >"
+        return "你沒有權限新增工地。<br><a href='/admin'>返回後台</a>"
 
     name = request.form["name"]
 
@@ -487,6 +728,22 @@ def add_site():
         "INSERT INTO sites(name, status) VALUES(?, '啟用')",
         (name,)
     )
+
+    site_id = cursor.lastrowid
+
+    cursor.execute("SELECT id FROM tools")
+    tools = cursor.fetchall()
+
+    for tool in tools:
+        cursor.execute("""
+            INSERT OR IGNORE INTO site_tools(
+                site_id,
+                tool_id,
+                total_quantity,
+                available_quantity
+            )
+            VALUES(?, ?, 0, 0)
+        """, (site_id, tool["id"]))
 
     conn.commit()
     conn.close()
@@ -501,7 +758,7 @@ def update_site(site_id):
         return redirect("/admin_login")
 
     if admin["role"] != "super":
-        return "你沒有權限修改工地。<br><a href='/admin'>返回後台</a >"
+        return "你沒有權限修改工地。<br><a href='/admin'>返回後台</a>"
 
     name = request.form["name"]
     status = request.form["status"]

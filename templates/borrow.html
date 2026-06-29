@@ -4,64 +4,94 @@
 <meta charset="UTF-8">
 <title>借工具</title>
 </head>
+
 <body>
 
 <h1>借工具</h1>
 
+<h2>
+目前工地：
+{% if admin and admin["role"]=="site" %}
+{{ sites[0]["name"] }}
+{% else %}
+{% for site in sites %}
+{% if site["id"]==selected_site_id %}
+{{ site["name"] }}
+{% endif %}
+{% endfor %}
+{% endif %}
+</h2>
+
 <h3>借用人：{{ user["name"] }}</h3>
+
 <p>手機：{{ user["phone"] }}</p>
 
 <form action="/borrow_submit" method="post">
 
-    <input type="hidden" name="user_id" value="{{ user['id'] }}">
+<input
+type="hidden"
+name="user_id"
+value="{{ user['id'] }}">
 
-    <h3>選擇工地</h3>
+<input
+type="hidden"
+name="site_id"
+value="{{ selected_site_id }}">
 
-    {% if admin and admin["role"] == "site" %}
-        <p>工地：{{ sites[0]["name"] }}</p>
-        <input type="hidden" name="site_id" value="{{ sites[0]['id'] }}">
-    {% else %}
-        <select name="site_id" required>
-            {% for site in sites %}
-                <option value="{{ site['id'] }}">{{ site["name"] }}</option>
-            {% endfor %}
-        </select>
-    {% endif %}
+<table border="1" cellpadding="10">
 
-    <br><br>
+<tr>
+<th>工具</th>
+<th>可借</th>
+<th>借用數量</th>
+</tr>
 
-    <table border="1" cellpadding="10">
-        <tr>
-            <th>工具</th>
-            <th>可借數量</th>
-            <th>借用數量</th>
-        </tr>
+{% for tool in tools %}
 
-        {% for tool in tools %}
-        <tr>
-            <td>{{ tool["name"] }}</td>
-            <td>{{ tool["available_quantity"] }}</td>
-            <td>
-                <input
-                    type="number"
-                    name="qty_{{ tool['id'] }}"
-                    min="0"
-                    max="{{ tool['available_quantity'] }}"
-                    value="0">
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+<tr>
 
-    <br>
+<td>{{ tool["name"] }}</td>
 
-    <button type="submit">確認借用</button>
+<td>{{ tool["available_quantity"] }}</td>
+
+<td>
+
+<input
+type="number"
+name="qty_{{ tool['id'] }}"
+min="0"
+max="{{ tool['available_quantity'] }}"
+value="0">
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br>
+
+<button type="submit">
+
+確認借用
+
+</button>
 
 </form>
 
 <br>
 
-<a href="/">返回首頁</a>
+<a href="/search">
+
+<button>
+
+返回搜尋
+
+</button>
+
+</a>
 
 </body>
 </html>

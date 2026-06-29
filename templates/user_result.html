@@ -4,37 +4,84 @@
 <meta charset="UTF-8">
 <title>借用人搜尋結果</title>
 </head>
+
 <body>
 
 {% if user %}
-    <h2>找到借用人</h2>
-    <p>姓名：{{ user["name"] }}</p>
-    <p>手機：{{ user["phone"] }}</p>
-    <a href="/borrow/{{ user['id'] }}">
-    <button>開始借工具</button>
+
+<h2>找到借用人</h2>
+
+<p>姓名：{{ user["name"] }}</p>
+
+<p>手機：{{ user["phone"] }}</p>
+
+<a href="/borrow/{{ user['id'] }}">
+<button>開始借工具</button>
 </a>
 
 <br><br>
 
-<a href="/">返回首頁</a>
+<a href="/search">
+<button>返回搜尋</button>
+</a>
+
 {% else %}
-    <h2>找不到這個手機號碼</h2>
 
-    <form action="/add_user" method="post">
-        <p>
-            姓名：
-            <input type="text" name="name" required>
-        </p>
+<h2>找不到借用人</h2>
 
-        <p>
-            手機：
-            <input type="text" name="phone" required>
-        </p>
+<form action="/add_user" method="post">
 
-        <button type="submit">新增借用人</button>
-    </form>
+<input type="hidden"
+name="site_id"
+value="{{ site_id }}">
 
-    <a href="/">返回首頁</a>
+<p>
+
+姓名
+
+<br>
+
+<input
+type="text"
+name="name"
+required>
+
+</p>
+
+<p>
+
+手機
+
+<br>
+
+<input
+type="text"
+name="phone"
+value="{{ phone }}"
+required>
+
+</p>
+
+<button type="submit">
+
+新增借用人
+
+</button>
+
+</form>
+
+<br>
+
+<a href="/search">
+
+<button>
+
+返回搜尋
+
+</button>
+
+</a>
+
 {% endif %}
 
 </body>
