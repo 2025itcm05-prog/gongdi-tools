@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>工地管理</title>
+</head>
+<body>
+
+<h1>工地管理</h1>
+
+<h2>新增工地</h2>
+
+<form action="/add_site" method="post">
+    <input type="text" name="name" placeholder="工地名稱" required>
+    <button type="submit">新增</button>
+</form>
+
+<hr>
+
+<h2>工地列表</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>工地名稱</th>
+        <th>狀態</th>
+        <th>操作</th>
+    </tr>
+
+    {% for site in sites %}
+    <tr>
+        <form action="/update_site/{{ site['id'] }}" method="post">
+            <td>
+                <input type="text" name="name" value="{{ site['name'] }}" required>
+            </td>
+            <td>
+                <select name="status">
+                    <option value="啟用" {% if site["status"]=="啟用" %}selected{% endif %}>啟用</option>
+                    <option value="停用" {% if site["status"]=="停用" %}selected{% endif %}>停用</option>
+                </select>
+            </td>
+            <td>
+                <button type="submit">儲存</button>
+            </td>
+        </form>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<a href="/admin">返回後台</a>
+
+</body>
+</html>

@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS borrow_records(
 )
 """)
 
-# 如果舊資料表沒有 site_id，就補上
 try:
     cursor.execute("ALTER TABLE borrow_records ADD COLUMN site_id INTEGER")
 except sqlite3.OperationalError:
@@ -96,7 +95,6 @@ CREATE TABLE IF NOT EXISTS admins(
 )
 """)
 
-# 如果舊 admins 沒有 role / site_id，就補上
 try:
     cursor.execute("ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'super'")
 except sqlite3.OperationalError:
@@ -110,40 +108,69 @@ except sqlite3.OperationalError:
 # ===========================
 # 預設工地
 # ===========================
-cursor.execute("INSERT OR IGNORE INTO sites(id, name, status) VALUES(1, 'A工地', '啟用')")
-cursor.execute("INSERT OR IGNORE INTO sites(id, name, status) VALUES(2, 'B工地', '啟用')")
-cursor.execute("INSERT OR IGNORE INTO sites(id, name, status) VALUES(3, 'C工地', '啟用')")
+sites = [
+    (1, "M05工地", "啟用"),
+    (2, "M21工地", "啟用"),
+    (3, "N01工地", "啟用"),
+    (4, "N02工地", "啟用")
+]
+
+for site in sites:
+    cursor.execute("""
+        INSERT OR IGNORE INTO sites(id, name, status)
+        VALUES(?, ?, ?)
+    """, site)
 
 # ===========================
 # 預設管理員
 # ===========================
-cursor.execute("""
-INSERT OR IGNORE INTO admins(id, username, password, role, site_id)
-VALUES(1, 'admin', '123456', 'super', NULL)
-""")
+admins = [
+    ("admin", "86251390", "super", None),
+    ("itc-m05", "m054270", "site", 1),
+    ("itc-m21", "m214270", "site", 2),
+    ("itc-n01", "n014270", "site", 3),
+    ("itc-n02", "n024270", "site", 4)
+]
 
-# 若舊 admin 已存在，補成總管理員
+for admin in admins:
+    cursor.execute("""
+        INSERT OR IGNORE INTO admins(username, password, role, site_id)
+        VALUES(?, ?, ?, ?)
+    """, admin)
+
+# 如果帳號已存在，強制更新成最新密碼與權限
 cursor.execute("""
 UPDATE admins
-SET role='super', site_id=NULL
+SET password='86251390', role='super', site_id=NULL
 WHERE username='admin'
 """)
 
-# 預設工地主任帳號
 cursor.execute("""
-INSERT OR IGNORE INTO admins(username, password, role, site_id)
-VALUES('siteA', '123456', 'site', 1)
+UPDATE admins
+SET password='m054270', role='site', site_id=1
+WHERE username='itc-m05'
 """)
 
 cursor.execute("""
-INSERT OR IGNORE INTO admins(username, password, role, site_id)
-VALUES('siteB', '123456', 'site', 2)
+UPDATE admins
+SET password='m214270', role='site', site_id=2
+WHERE username='itc-m21'
 """)
 
 cursor.execute("""
-INSERT OR IGNORE INTO admins(username, password, role, site_id)
-VALUES('siteC', '123456', 'site', 3)
+UPDATE admins
+SET password='n014270', role='site', site_id=3
+WHERE username='itc-n01'
 """)
+
+cursor.execute("""
+UPDATE admins
+SET password='n024270', role='site', site_id=4
+WHERE username='itc-n02'
+""")
+
+# 舊帳號停用方式：直接刪除舊 siteA/siteB/siteC
+cursor.execute("DELETE FROM admins WHERE username IN ('siteA', 'siteB', 'siteC')")
 
 # ===========================
 # 工具分類
