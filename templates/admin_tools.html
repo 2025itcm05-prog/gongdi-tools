@@ -35,18 +35,21 @@
 
 <table border="1" cellpadding="10">
     <tr>
-        <th>名稱</th>
+        <th>工具名稱</th>
         <th>總數量</th>
         <th>可借數量</th>
         <th>位置</th>
         <th>狀態</th>
         <th>操作</th>
+        <th>刪除</th>
     </tr>
 
     {% for tool in tools %}
     <tr>
         <form action="/update_tool/{{ tool['id'] }}" method="post">
-            <td>{{ tool["name"] }}</td>
+            <td>
+                <input type="text" name="name" value="{{ tool['name'] }}" required>
+            </td>
 
             <td>
                 <input type="number" name="total_quantity" value="{{ tool['total_quantity'] }}" min="0">
@@ -72,6 +75,12 @@
                 <button type="submit">儲存</button>
             </td>
         </form>
+
+        <td>
+            <a href="/delete_tool/{{ tool['id'] }}" onclick="return confirm('確定要刪除這個工具嗎？');">
+                <button>刪除</button>
+            </a>
+        </td>
     </tr>
     {% endfor %}
 </table>

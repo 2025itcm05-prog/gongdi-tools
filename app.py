@@ -256,6 +256,7 @@ def add_tool():
 
 @app.route("/update_tool/<int:tool_id>", methods=["POST"])
 def update_tool(tool_id):
+    name = request.form["name"]
     total_quantity = int(request.form["total_quantity"])
     available_quantity = int(request.form["available_quantity"])
     location = request.form["location"]
@@ -266,18 +267,45 @@ def update_tool(tool_id):
 
     cursor.execute("""
         UPDATE tools
-        SET total_quantity=?,
+        SET name=?,
+            total_quantity=?,
             available_quantity=?,
             location=?,
             status=?
         WHERE id=?
     """, (
+        name,
         total_quantity,
         available_quantity,
         location,
         status,
         tool_id
     ))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin_tools")
+
+
+@app.route("/delete_tool/<int:tool_id>")
+def delete_tool(tool_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM borrow_records
+        WHERE tool_id=? AND status='借出'
+    """, (tool_id,))
+
+    borrowed_count = cursor.fetchone()[0]
+
+    if borrowed_count > 0:
+        conn.close()
+        return "這個工具目前有人借用中，不能刪除。<br><a href='/admin_tools'>返回工具管理</a>"
+
+    cursor.execute("DELETE FROM tools WHERE id=?", (tool_id,))
 
     conn.commit()
     conn.close()
