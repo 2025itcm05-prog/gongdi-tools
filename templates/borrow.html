@@ -15,6 +15,21 @@
 
     <input type="hidden" name="user_id" value="{{ user['id'] }}">
 
+    <h3>選擇工地</h3>
+
+    {% if admin and admin["role"] == "site" %}
+        <p>工地：{{ sites[0]["name"] }}</p>
+        <input type="hidden" name="site_id" value="{{ sites[0]['id'] }}">
+    {% else %}
+        <select name="site_id" required>
+            {% for site in sites %}
+                <option value="{{ site['id'] }}">{{ site["name"] }}</option>
+            {% endfor %}
+        </select>
+    {% endif %}
+
+    <br><br>
+
     <table border="1" cellpadding="10">
         <tr>
             <th>工具</th>

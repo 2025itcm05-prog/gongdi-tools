@@ -8,9 +8,14 @@
 
 <h1>借用紀錄</h1>
 
+{% if admin %}
+    <p>登入帳號：{{ admin["username"] }}</p>
+{% endif %}
+
 <table border="1" cellpadding="10">
     <tr>
         <th>編號</th>
+        <th>工地</th>
         <th>借用人</th>
         <th>手機</th>
         <th>工具</th>
@@ -24,6 +29,7 @@
     {% for record in records %}
     <tr>
         <td>{{ record["id"] }}</td>
+        <td>{{ record["site_name"] or "未指定" }}</td>
         <td>{{ record["user_name"] }}</td>
         <td>{{ record["phone"] }}</td>
         <td>{{ record["tool_name"] }}</td>
@@ -32,20 +38,22 @@
         <td>{{ record["return_time"] or "尚未歸還" }}</td>
         <td>{{ record["status"] }}</td>
         <td>
-    {% if record["status"] == "借出" %}
-        <a href="/return_tool/{{ record['id'] }}">
-            <button>歸還</button>
-        </a>
-    {% else %}
-        -
-    {% endif %}
-</td>
+            {% if record["status"] == "借出" %}
+                <a href="/return_tool/{{ record['id'] }}">
+                    <button>歸還</button>
+                </a>
+            {% else %}
+                -
+            {% endif %}
+        </td>
     </tr>
     {% endfor %}
 </table>
 
 <br>
 
+<a href="/admin">返回後台</a>
+<br>
 <a href="/">返回首頁</a>
 
 </body>
