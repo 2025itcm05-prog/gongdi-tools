@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>借用人搜尋結果</title>
+</head>
+<body>
+
+{% if user %}
+    <h2>找到借用人</h2>
+    <p>姓名：{{ user["name"] }}</p>
+    <p>手機：{{ user["phone"] }}</p>
+    <a href="/borrow/{{ user['id'] }}">
+    <button>開始借工具</button>
+</a>
+
+<br><br>
+
+<a href="/">返回首頁</a>
+{% else %}
+    <h2>找不到這個手機號碼</h2>
+
+    <form action="/add_user" method="post">
+        <p>
+            姓名：
+            <input type="text" name="name" required>
+        </p>
+
+        <p>
+            手機：
+            <input type="text" name="phone" required>
+        </p>
+
+        <button type="submit">新增借用人</button>
+    </form>
+
+    <a href="/">返回首頁</a>
+{% endif %}
+
+</body>
+</html>

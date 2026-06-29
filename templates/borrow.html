@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>借工具</title>
+</head>
+<body>
+
+<h1>借工具</h1>
+
+<h3>借用人：{{ user["name"] }}</h3>
+<p>手機：{{ user["phone"] }}</p>
+
+<form action="/borrow_submit" method="post">
+
+    <input type="hidden" name="user_id" value="{{ user['id'] }}">
+
+    <table border="1" cellpadding="10">
+        <tr>
+            <th>工具</th>
+            <th>可借數量</th>
+            <th>借用數量</th>
+        </tr>
+
+        {% for tool in tools %}
+        <tr>
+            <td>{{ tool["name"] }}</td>
+            <td>{{ tool["available_quantity"] }}</td>
+            <td>
+                <input
+                    type="number"
+                    name="qty_{{ tool['id'] }}"
+                    min="0"
+                    max="{{ tool['available_quantity'] }}"
+                    value="0">
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+
+    <button type="submit">確認借用</button>
+
+</form>
+
+<br>
+
+<a href="/">返回首頁</a>
+
+</body>
+</html>

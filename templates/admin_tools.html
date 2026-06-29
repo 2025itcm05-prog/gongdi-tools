@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>工具管理</title>
+</head>
+<body>
+
+<h1>工具管理</h1>
+
+<h2>新增工具</h2>
+
+<form action="/add_tool" method="post">
+    <p>
+        工具名稱：
+        <input type="text" name="name" required>
+    </p>
+
+    <p>
+        總數量：
+        <input type="number" name="total_quantity" min="1" required>
+    </p>
+
+    <p>
+        存放位置：
+        <input type="text" name="location">
+    </p>
+
+    <button type="submit">新增工具</button>
+</form>
+
+<hr>
+
+<h2>工具列表</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>名稱</th>
+        <th>總數量</th>
+        <th>可借數量</th>
+        <th>位置</th>
+        <th>狀態</th>
+        <th>操作</th>
+    </tr>
+
+    {% for tool in tools %}
+    <tr>
+        <form action="/update_tool/{{ tool['id'] }}" method="post">
+            <td>{{ tool["name"] }}</td>
+
+            <td>
+                <input type="number" name="total_quantity" value="{{ tool['total_quantity'] }}" min="0">
+            </td>
+
+            <td>
+                <input type="number" name="available_quantity" value="{{ tool['available_quantity'] }}" min="0">
+            </td>
+
+            <td>
+                <input type="text" name="location" value="{{ tool['location'] }}">
+            </td>
+
+            <td>
+                <select name="status">
+                    <option value="正常" {% if tool["status"]=="正常" %}selected{% endif %}>正常</option>
+                    <option value="維修中" {% if tool["status"]=="維修中" %}selected{% endif %}>維修中</option>
+                    <option value="報廢" {% if tool["status"]=="報廢" %}selected{% endif %}>報廢</option>
+                </select>
+            </td>
+
+            <td>
+                <button type="submit">儲存</button>
+            </td>
+        </form>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+
+<a href="/admin">返回後台</a>
+
+</body>
+</html>
