@@ -27,6 +27,90 @@ def require_admin():
     return current_admin()
 
 
+@app.after_request
+def add_mobile_style_and_credit(response):
+    content_type = response.headers.get("Content-Type", "")
+
+    if "text/html" not in content_type:
+        return response
+
+    html = response.get_data(as_text=True)
+
+    mobile_style = """
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style id="mobile-v24-style">
+body{
+    font-family: Arial, "微軟正黑體";
+    font-size: 34px;
+    margin: 25px;
+    padding-bottom: 60px;
+}
+
+h1{
+    font-size: 56px;
+}
+
+h2{
+    font-size: 46px;
+}
+
+h3{
+    font-size: 40px;
+}
+
+p, a, label{
+    font-size: 34px;
+}
+
+button{
+    font-size: 34px;
+    padding: 16px 34px;
+    margin: 10px;
+    min-height: 75px;
+}
+
+input, select{
+    font-size: 34px;
+    padding: 12px;
+    min-height: 60px;
+    max-width: 95%;
+}
+
+table{
+    width: 100%;
+    font-size: 30px;
+    border-collapse: collapse;
+}
+
+th, td{
+    padding: 14px;
+}
+
+.creator-514{
+    position: fixed;
+    right: 12px;
+    bottom: 8px;
+    font-size: 18px;
+    color: #888;
+    background: rgba(255,255,255,0.8);
+    padding: 4px 8px;
+    z-index: 9999;
+}
+</style>
+"""
+
+    if "mobile-v24-style" not in html and "</head>" in html:
+        html = html.replace("</head>", mobile_style + "\n</head>")
+
+    if "creator-514" not in html and "</body>" in html:
+        html = html.replace("</body>", '<div class="creator-514">製作人：514</div>\n</body>')
+
+    response.set_data(html)
+    return response
+
+
+
+
 @app.route("/")
 def index():
     conn = get_db()
@@ -720,6 +804,8 @@ def add_site():
         return "你沒有權限新增工地。<br><a href='/admin'>返回後台</a>"
 
     name = request.form["name"]
+    admin_username = request.form.get("admin_username", "").strip()
+    admin_password = request.form.get("admin_password", "").strip()
 
     conn = get_db()
     cursor = conn.cursor()
@@ -744,6 +830,21 @@ def add_site():
             )
             VALUES(?, ?, 0, 0)
         """, (site_id, tool["id"]))
+
+    if admin_username and admin_password:
+        cursor.execute("""
+            INSERT INTO admins(
+                username,
+                password,
+                role,
+                site_id
+            )
+            VALUES(?, ?, 'site', ?)
+        """, (
+            admin_username,
+            admin_password,
+            site_id
+        ))
 
     conn.commit()
     conn.close()

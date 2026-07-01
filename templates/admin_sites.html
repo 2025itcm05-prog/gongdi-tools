@@ -3,77 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <title>工地管理</title>
-<style>
-
-body{
-    font-family: Arial,"微軟正黑體";
-    font-size:32px;
-    margin:30px;
-}
-
-h1{
-    font-size:52px;
-}
-
-h2{
-    font-size:42px;
-}
-
-h3{
-    font-size:36px;
-}
-
-p{
-    font-size:32px;
-}
-
-a{
-    font-size:32px;
-}
-
-button{
-    font-size:32px;
-    padding:15px 35px;
-    margin:8px;
-}
-
-input{
-    font-size:32px;
-    padding:12px;
-}
-
-select{
-    font-size:32px;
-    padding:12px;
-}
-
-table{
-    font-size:30px;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:15px;
-}
-
-</style>
 </head>
 <body>
 
 <h1>工地管理</h1>
 
-<h2>新增工地</h2>
+<h2>新增工地與工地主任帳號</h2>
 
 <form action="/add_site" method="post">
-    <input type="text" name="name" placeholder="工地名稱" required>
-    <button type="submit">新增</button>
+    <p>
+        工地名稱：<br>
+        <input type="text" name="name" required>
+    </p>
+
+    <p>
+        工地主任帳號：<br>
+        <input type="text" name="admin_username">
+    </p>
+
+    <p>
+        工地主任密碼：<br>
+        <input type="text" name="admin_password">
+    </p>
+
+    <button type="submit">新增工地</button>
 </form>
 
 <hr>
 
 <h2>工地列表</h2>
 
-<table border="1" cellpadding="10">
+<table border="1">
     <tr>
         <th>工地名稱</th>
         <th>狀態</th>
@@ -86,12 +46,14 @@ th,td{
             <td>
                 <input type="text" name="name" value="{{ site['name'] }}" required>
             </td>
+
             <td>
                 <select name="status">
                     <option value="啟用" {% if site["status"]=="啟用" %}selected{% endif %}>啟用</option>
                     <option value="停用" {% if site["status"]=="停用" %}selected{% endif %}>停用</option>
                 </select>
             </td>
+
             <td>
                 <button type="submit">儲存</button>
             </td>
@@ -102,7 +64,9 @@ th,td{
 
 <br>
 
-<a href="/admin">返回後台</a>
+<a href="/admin">
+    <button>返回後台</button>
+</a>
 
 </body>
 </html>
