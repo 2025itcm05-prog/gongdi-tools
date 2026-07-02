@@ -68,9 +68,12 @@ th,td{
 <form action="/search_user" method="post">
 
 <input
-type="text"
+type="tel"
 name="phone"
 placeholder="請輸入手機號碼"
+inputmode="numeric"
+pattern="[0-9]*"
+autocomplete="tel"
 required>
 
 <br><br>
