@@ -2,113 +2,128 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>借用紀錄</title>
+
 <style>
 
 body{
     font-family: Arial,"微軟正黑體";
     font-size:32px;
-    margin:30px;
+    margin:25px;
 }
 
 h1{
     font-size:52px;
 }
 
-h2{
-    font-size:42px;
-}
-
-h3{
-    font-size:36px;
-}
-
-p{
-    font-size:32px;
-}
-
-a{
-    font-size:32px;
-}
-
-button{
-    font-size:32px;
-    padding:15px 35px;
-    margin:8px;
-}
-
-input{
-    font-size:32px;
-    padding:12px;
-}
-
-select{
-    font-size:32px;
-    padding:12px;
-}
-
 table{
-    font-size:30px;
+    width:100%;
     border-collapse:collapse;
+    font-size:28px;
 }
 
 th,td{
-    padding:15px;
+    border:1px solid #ccc;
+    padding:12px;
+    text-align:center;
+}
+
+input{
+    font-size:24px;
+    padding:8px;
+    width:130px;
+}
+
+button{
+    font-size:24px;
+    padding:10px 20px;
 }
 
 </style>
+
 </head>
 <body>
 
 <h1>借用紀錄</h1>
 
-{% if admin %}
-    <p>登入帳號：{{ admin["username"] }}</p>
-{% endif %}
+<table>
 
-<table border="1" cellpadding="10">
-    <tr>
-        <th>編號</th>
-        <th>工地</th>
-        <th>借用人</th>
-        <th>手機</th>
-        <th>工具</th>
-        <th>數量</th>
-        <th>借出時間</th>
-        <th>歸還時間</th>
-        <th>狀態</th>
-        <th>操作</th>
-    </tr>
+<tr>
+    <th>工地</th>
+    <th>借用人</th>
+    <th>手機</th>
+    <th>工具</th>
+    <th>數量</th>
+    <th>借出時間</th>
+    <th>歸還時間</th>
+    <th>狀態</th>
+    <th>歸還人</th>
+    <th>操作</th>
+</tr>
 
-    {% for record in records %}
-    <tr>
-        <td>{{ record["id"] }}</td>
-        <td>{{ record["site_name"] or "未指定" }}</td>
-        <td>{{ record["user_name"] }}</td>
-        <td>{{ record["phone"] }}</td>
-        <td>{{ record["tool_name"] }}</td>
-        <td>{{ record["quantity"] }}</td>
-        <td>{{ record["borrow_time"] }}</td>
-        <td>{{ record["return_time"] or "尚未歸還" }}</td>
-        <td>{{ record["status"] }}</td>
-        <td>
-            {% if record["status"] == "借出" %}
-                <a href="/return_tool/{{ record['id'] }}">
-                    <button>歸還</button>
-                </a>
-            {% else %}
-                -
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
+{% for record in records %}
+
+<tr>
+
+    <td>{{ record["site_name"] }}</td>
+    <td>{{ record["user_name"] }}</td>
+    <td>{{ record["phone"] }}</td>
+    <td>{{ record["tool_name"] }}</td>
+    <td>{{ record["quantity"] }}</td>
+    <td>{{ record["borrow_time"] }}</td>
+    <td>{{ record["return_time"] or "" }}</td>
+    <td>{{ record["status"] }}</td>
+    <td>{{ record["return_user_name"] or "" }}</td>
+
+    <td>
+
+    {% if record["status"]=="借出" %}
+
+    <form action="/return_tool/{{ record['id'] }}" method="post">
+
+        <input
+        type="text"
+        name="return_code"
+        placeholder="請輸入歸還碼"
+        required>
+
+        <br><br>
+
+        <button type="submit">
+        歸還
+        </button>
+
+    </form>
+
+    {% else %}
+
+    已完成
+
+    {% endif %}
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
 </table>
 
 <br>
 
-<a href="/admin">返回後台</a>
-<br>
-<a href="/">返回首頁</a>
+<a href="/admin">
+<button>
+返回後台
+</button>
+</a>
+
+<a href="/">
+<button>
+返回首頁
+</button>
+</a>
 
 </body>
 </html>

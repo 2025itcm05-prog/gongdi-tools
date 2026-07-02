@@ -327,11 +327,13 @@ def history():
                 borrow_records.quantity,
                 borrow_records.borrow_time,
                 borrow_records.return_time,
-                borrow_records.status
+                borrow_records.status,
+                return_users.name AS return_user_name
             FROM borrow_records
             JOIN users ON borrow_records.user_id = users.id
             JOIN tools ON borrow_records.tool_id = tools.id
             LEFT JOIN sites ON borrow_records.site_id = sites.id
+            LEFT JOIN return_users ON borrow_records.return_user_id = return_users.id
             WHERE borrow_records.site_id=?
             ORDER BY borrow_records.borrow_time DESC
         """, (admin["site_id"],))
@@ -346,11 +348,13 @@ def history():
                 borrow_records.quantity,
                 borrow_records.borrow_time,
                 borrow_records.return_time,
-                borrow_records.status
+                borrow_records.status,
+                return_users.name AS return_user_name
             FROM borrow_records
             JOIN users ON borrow_records.user_id = users.id
             JOIN tools ON borrow_records.tool_id = tools.id
             LEFT JOIN sites ON borrow_records.site_id = sites.id
+            LEFT JOIN return_users ON borrow_records.return_user_id = return_users.id
             ORDER BY borrow_records.borrow_time DESC
         """)
 
@@ -360,12 +364,28 @@ def history():
     return render_template("history.html", records=records, admin=admin)
 
 
-@app.route("/return_tool/<int:record_id>")
+@app.route("/return_tool/<int:record_id>", methods=["POST"])
 def return_tool(record_id):
     admin = current_admin()
+    return_code = request.form.get("return_code", "").strip()
+
+    if not return_code:
+        return "請輸入歸還碼。<br><a href='/history'>返回借用紀錄</a>"
 
     conn = get_db()
     cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM return_users
+        WHERE return_code=? AND status='啟用'
+    """, (return_code,))
+
+    return_user = cursor.fetchone()
+
+    if not return_user:
+        conn.close()
+        return "歸還碼錯誤或已停用。<br><a href='/history'>返回借用紀錄</a>"
 
     if admin and admin["role"] == "site":
         cursor.execute("""
@@ -386,9 +406,10 @@ def return_tool(record_id):
         cursor.execute("""
             UPDATE borrow_records
             SET status='已歸還',
-                return_time=CURRENT_TIMESTAMP
+                return_time=CURRENT_TIMESTAMP,
+                return_user_id=?
             WHERE id=?
-        """, (record_id,))
+        """, (return_user["id"], record_id))
 
         cursor.execute("""
             UPDATE site_tools
@@ -877,6 +898,133 @@ def update_site(site_id):
     conn.close()
 
     return redirect("/admin_sites")
+
+
+@app.route("/admin_return_users")
+def admin_return_users():
+    admin = require_admin()
+    if not admin:
+        return redirect("/admin_login")
+
+    if admin["role"] != "super":
+        return "你沒有權限管理歸還人員。<br><a href='/admin'>返回後台</a>"
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT *
+        FROM return_users
+        ORDER BY name
+    """)
+
+    return_users = cursor.fetchall()
+
+    conn.close()
+
+    return render_template(
+        "admin_return_users.html",
+        return_users=return_users,
+        admin=admin
+    )
+
+
+@app.route("/add_return_user", methods=["POST"])
+def add_return_user():
+    admin = require_admin()
+    if not admin:
+        return redirect("/admin_login")
+
+    if admin["role"] != "super":
+        return "你沒有權限新增歸還人員。<br><a href='/admin'>返回後台</a>"
+
+    name = request.form["name"].strip()
+    return_code = request.form["return_code"].strip()
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO return_users(
+                name,
+                return_code,
+                status
+            )
+            VALUES(?, ?, '啟用')
+        """, (name, return_code))
+
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return "歸還碼已被使用，請換一組。<br><a href='/admin_return_users'>返回歸還人員管理</a>"
+
+    conn.close()
+
+    return redirect("/admin_return_users")
+
+
+@app.route("/update_return_user/<int:return_user_id>", methods=["POST"])
+def update_return_user(return_user_id):
+    admin = require_admin()
+    if not admin:
+        return redirect("/admin_login")
+
+    if admin["role"] != "super":
+        return "你沒有權限修改歸還人員。<br><a href='/admin'>返回後台</a>"
+
+    name = request.form["name"].strip()
+    return_code = request.form["return_code"].strip()
+    status = request.form["status"]
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            UPDATE return_users
+            SET name=?,
+                return_code=?,
+                status=?
+            WHERE id=?
+        """, (
+            name,
+            return_code,
+            status,
+            return_user_id
+        ))
+
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return "歸還碼已被使用，請換一組。<br><a href='/admin_return_users'>返回歸還人員管理</a>"
+
+    conn.close()
+
+    return redirect("/admin_return_users")
+
+
+@app.route("/delete_return_user/<int:return_user_id>")
+def delete_return_user(return_user_id):
+    admin = require_admin()
+    if not admin:
+        return redirect("/admin_login")
+
+    if admin["role"] != "super":
+        return "你沒有權限刪除歸還人員。<br><a href='/admin'>返回後台</a>"
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM return_users
+        WHERE id=?
+    """, (return_user_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin_return_users")
 
 
 if __name__ == "__main__":

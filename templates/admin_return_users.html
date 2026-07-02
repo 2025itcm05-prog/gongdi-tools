@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>歸還人員管理</title>
+
+<style>
+body{
+    font-family: Arial,"微軟正黑體";
+    font-size:32px;
+    margin:25px;
+}
+
+h1{
+    font-size:52px;
+}
+
+button,input,select{
+    font-size:30px;
+    padding:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:28px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:12px;
+    text-align:center;
+}
+</style>
+
+</head>
+<body>
+
+<h1>歸還人員管理</h1>
+
+<form action="/add_return_user" method="post">
+
+姓名<br>
+<input type="text" name="name" required>
+
+<br><br>
+
+歸還碼（不可重複）<br>
+<input type="text" name="return_code" required>
+
+<br><br>
+
+<button>新增</button>
+
+</form>
+
+<br><hr><br>
+
+<table>
+
+<tr>
+<th>姓名</th>
+<th>歸還碼</th>
+<th>狀態</th>
+<th>儲存</th>
+<th>刪除</th>
+</tr>
+
+{% for user in return_users %}
+
+<tr>
+
+<form action="/update_return_user/{{ user['id'] }}" method="post">
+
+<td>
+<input
+type="text"
+name="name"
+value="{{ user['name'] }}"
+required>
+</td>
+
+<td>
+<input
+type="text"
+name="return_code"
+value="{{ user['return_code'] }}"
+required>
+</td>
+
+<td>
+
+<select name="status">
+
+<option value="啟用"
+{% if user["status"]=="啟用" %}selected{% endif %}>
+啟用
+</option>
+
+<option value="停用"
+{% if user["status"]=="停用" %}selected{% endif %}>
+停用
+</option>
+
+</select>
+
+</td>
+
+<td>
+
+<button type="submit">
+儲存
+</button>
+
+</td>
+
+</form>
+
+<td>
+
+<a href="/delete_return_user/{{ user['id'] }}"
+onclick="return confirm('確定刪除？')">
+
+<button>
+刪除
+</button>
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<br>
+
+<a href="/admin">
+<button>
+返回後台
+</button>
+</a>
+
+</body>
+</html>

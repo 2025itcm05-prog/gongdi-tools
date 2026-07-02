@@ -2,7 +2,10 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>管理員後台</title>
+
 <style>
 
 body{
@@ -27,37 +30,17 @@ p{
     font-size:32px;
 }
 
-a{
-    font-size:32px;
-}
-
 button{
     font-size:32px;
     padding:15px 35px;
     margin:8px;
-}
-
-input{
-    font-size:32px;
-    padding:12px;
-}
-
-select{
-    font-size:32px;
-    padding:12px;
-}
-
-table{
-    font-size:30px;
-    border-collapse:collapse;
-}
-
-th,td{
-    padding:15px;
+    min-width:260px;
 }
 
 </style>
+
 </head>
+
 <body>
 
 <h1>管理員後台</h1>
@@ -65,11 +48,11 @@ th,td{
 <p>登入帳號：{{ admin["username"] }}</p>
 
 {% if admin["role"] == "super" %}
-    <p>身分：總管理員</p>
-    <p>啟用工地數：{{ site_count }}</p>
+<p>身分：總管理員</p>
+<p>啟用工地數：{{ site_count }}</p>
 {% else %}
-    <p>身分：工地主任</p>
-    <p>管理工地：{{ site["name"] }}</p>
+<p>身分：工地主任</p>
+<p>管理工地：{{ site["name"] }}</p>
 {% endif %}
 
 <p>目前未歸還數量：{{ borrowed_count }}</p>
@@ -77,25 +60,55 @@ th,td{
 <hr>
 
 <p>
-    <a href="/history"><button>借用紀錄</button></a>
+<a href="/history">
+<button>
+借用紀錄
+</button>
+</a>
 </p>
 
 <p>
-    <a href="/admin_tools"><button>工具管理</button></a>
+<a href="/admin_tools">
+<button>
+工具管理
+</button>
+</a>
 </p>
 
 {% if admin["role"] == "super" %}
+
 <p>
-    <a href="/admin_sites"><button>工地管理</button></a>
+<a href="/admin_sites">
+<button>
+工地管理
+</button>
+</a>
 </p>
+
+<p>
+<a href="/admin_return_users">
+<button>
+歸還人員管理
+</button>
+</a>
+</p>
+
 {% endif %}
 
 <p>
-    <a href="/admin_logout"><button>登出</button></a>
+<a href="/admin_logout">
+<button>
+登出
+</button>
+</a>
 </p>
 
 <p>
-    <a href="/"><button>返回首頁</button></a>
+<a href="/">
+<button>
+返回首頁
+</button>
+</a>
 </p>
 
 </body>
